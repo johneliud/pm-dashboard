@@ -31,9 +31,20 @@ class SyncService {
       let syncedCount = 0;
 
       // Process each item
+      let failedCount = 0;
       for (const item of items) {
-        await this.processWorkItem(client, projectId, item);
-        syncedCount++;
+        try {
+          await this.processWorkItem(client, projectId, item);
+          syncedCount++;
+        } catch (error) {
+          console.error(`Failed to process item ${item.id}:`, error.message);
+          failedCount++;
+          // Continue processing other items instead of failing the entire sync
+        }
+      }
+      
+      if (failedCount > 0) {
+        console.log(`Sync completed with ${failedCount} failed items out of ${items.length} total`);
       }
 
       // Update sync log
@@ -61,10 +72,11 @@ class SyncService {
   }
 
   async processWorkItem(client, projectId, item) {
-    if (!item.content) return;
+    try {
+      if (!item.content) return;
 
-    const content = item.content;
-    const fieldValues = item.fieldValues?.nodes || [];
+      const content = item.content;
+      const fieldValues = item.fieldValues?.nodes || [];
 
     // Extract field values
     const getFieldValue = (fieldName) => {
@@ -74,6 +86,30 @@ class SyncService {
       return field?.text || field?.name || field?.number || field?.date || null;
     };
 
+    // Helper function to safely parse integer values
+    const parseIntegerField = (value) => {
+      if (value === null || value === undefined) return null;
+      
+      // If it's already a number, return it
+      if (typeof value === 'number') return Math.round(value);
+      
+      // Try to parse string to number
+      const parsed = parseInt(value, 10);
+      return isNaN(parsed) ? null : parsed;
+    };
+
+    // Helper function to safely parse date values
+    const parseDateField = (value) => {
+      if (!value) return null;
+      
+      try {
+        const date = new Date(value);
+        return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0]; // Return YYYY-MM-DD format
+      } catch (error) {
+        return null;
+      }
+    };
+
     // Process assignees
     let assigneeId = null;
     if (content.assignees?.nodes?.length > 0) {
@@ -81,18 +117,22 @@ class SyncService {
       assigneeId = await this.ensureTeamMember(client, projectId, assignee);
     }
 
-    // Prepare work item data
+    // Prepare work item data with proper type conversion
+    const sizeValue = getFieldValue('Size') || getFieldValue('Story Points') || getFieldValue('Estimate') || getFieldValue('Points');
+    const startDateValue = getFieldValue('Start Date') || getFieldValue('Started');
+    const endDateValue = getFieldValue('End Date') || getFieldValue('Due Date') || getFieldValue('Target Date');
+    
     const workItemData = {
       github_item_id: item.id,
       github_issue_number: content.number || null,
       title: content.title || 'Untitled',
       status: getFieldValue('Status') || content.state || 'Unknown',
       assignee_id: assigneeId,
-      size_estimate: getFieldValue('Size') || getFieldValue('Story Points') || getFieldValue('Estimate'),
+      size_estimate: parseIntegerField(sizeValue),
       priority: getFieldValue('Priority') || 'Medium',
       item_type: item.type || 'Issue',
-      start_date: getFieldValue('Start Date') || null,
-      end_date: getFieldValue('End Date') || getFieldValue('Due Date') || null,
+      start_date: parseDateField(startDateValue),
+      end_date: parseDateField(endDateValue),
       milestone: content.milestone?.title || null,
       github_data: JSON.stringify(item)
     };
@@ -133,6 +173,14 @@ class SyncService {
         workItemData.github_data
       ]
     );
+    } catch (error) {
+      console.error(`Error processing work item ${item.id}:`, error);
+      // Log the problematic data for debugging
+      if (error.message.includes('invalid input syntax for type integer')) {
+        console.error('Data type error - Raw field values:', JSON.stringify(fieldValues, null, 2));
+      }
+      throw error; // Re-throw to be handled by the sync process
+    }
   }
 
   async ensureTeamMember(client, projectId, assignee) {
