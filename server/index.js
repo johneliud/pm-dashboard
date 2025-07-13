@@ -19,7 +19,7 @@ app.use('/api/projects', projectRoutes);
 
 // Test route
 app.get("/api/health", (req, res) => {
-  res.json({ message: "Backend is up and running ✅" });
+  res.json({ message: "Backend is up and running" });
 });
 
 // Initialize database and start server
