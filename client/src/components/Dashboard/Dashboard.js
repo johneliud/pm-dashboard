@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ProjectForm from './ProjectForm';
 import axios from 'axios';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -14,7 +16,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchProjects = async () => {
     try {
@@ -121,10 +123,10 @@ const Dashboard = () => {
                     Sync Data
                   </button>
                   <button
-                    onClick={() => alert('View details coming in Phase 2!')}
+                    onClick={() => navigate(`/project/${project.id}`)}
                     className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
                   >
-                    View Details
+                    View Analytics
                   </button>
                 </div>
                 
