@@ -1,27 +1,38 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import LoginForm from './components/Auth/LoginForm';
+import RegisterForm from './components/Auth/RegisterForm';
+import Dashboard from './components/Dashboard/Dashboard';
 import './App.css';
+
+function AuthWrapper() {
+  const { user, loading } = useAuth();
+  const [isLogin, setIsLogin] = useState(true);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Dashboard />;
+  }
+
+  return isLogin ? (
+    <LoginForm onToggleMode={() => setIsLogin(false)} />
+  ) : (
+    <RegisterForm onToggleMode={() => setIsLogin(true)} />
+  );
+}
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <h1 className="text-3xl font-bold underline">
-          Hello world!
-        </h1>
-        <h1 className="text-3xl font-bold underline">
-          Hello world!
-        </h1>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <AuthProvider>
+      <AuthWrapper />
+    </AuthProvider>
   );
 }
 
