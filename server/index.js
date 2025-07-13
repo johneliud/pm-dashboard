@@ -13,9 +13,11 @@ app.use(express.json());
 // Routes
 const authRoutes = require('./routes/auth');
 const projectRoutes = require('./routes/projects');
+const analyticsRoutes = require('./routes/analytics');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Test route
 app.get("/api/health", (req, res) => {
@@ -38,6 +40,12 @@ async function startServer() {
       console.log('  POST /api/projects');
       console.log('  POST /api/projects/:id/sync');
       console.log('  GET  /api/projects/:id/items');
+      console.log('  GET  /api/analytics/:projectId/progress');
+      console.log('  GET  /api/analytics/:projectId/status-distribution');
+      console.log('  GET  /api/analytics/:projectId/velocity');
+      console.log('  GET  /api/analytics/:projectId/burndown');
+      console.log('  GET  /api/analytics/:projectId/workload');
+      console.log('  GET  /api/analytics/:projectId/overview');
     });
   } catch (error) {
     console.error('Failed to start server:', error);
