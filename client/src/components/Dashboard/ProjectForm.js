@@ -19,9 +19,9 @@ const ProjectForm = ({ onProjectCreated, onCancel }) => {
     try {
       const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
       const response = await axios.post(`${API_BASE_URL}/projects`, {
-        name: formData.name,
-        githubOwner: formData.githubOwner,
-        githubRepo: formData.githubRepo,
+        name: formData.name.trim(),
+        githubOwner: formData.githubOwner.trim(),
+        githubRepo: formData.githubRepo.trim(),
         githubProjectNumber: parseInt(formData.githubProjectNumber)
       });
 
@@ -60,7 +60,7 @@ const ProjectForm = ({ onProjectCreated, onCancel }) => {
               type="text"
               id="name"
               name="name"
-              value={formData.name}
+              value={formData.name.trim()}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -76,7 +76,7 @@ const ProjectForm = ({ onProjectCreated, onCancel }) => {
               type="text"
               id="githubOwner"
               name="githubOwner"
-              value={formData.githubOwner}
+              value={formData.githubOwner.trim()}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -92,7 +92,7 @@ const ProjectForm = ({ onProjectCreated, onCancel }) => {
               type="text"
               id="githubRepo"
               name="githubRepo"
-              value={formData.githubRepo}
+              value={formData.githubRepo.trim()}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"

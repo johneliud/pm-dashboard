@@ -15,7 +15,7 @@ const RegisterForm = ({ onToggleMode }) => {
     setLoading(true);
     setError('');
 
-    if (password !== confirmPassword) {
+    if (password.trim() !== confirmPassword.trim()) {
       setError('Passwords do not match');
       setLoading(false);
       return;
@@ -67,7 +67,7 @@ const RegisterForm = ({ onToggleMode }) => {
                   type="email"
                   autoComplete="email"
                   required
-                  value={email}
+                  value={email.trim()}
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Enter your email"
@@ -86,7 +86,7 @@ const RegisterForm = ({ onToggleMode }) => {
                   type="password"
                   autoComplete="new-password"
                   required
-                  value={password}
+                  value={password.trim()}
                   onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Choose a password"
@@ -105,7 +105,7 @@ const RegisterForm = ({ onToggleMode }) => {
                   type="password"
                   autoComplete="new-password"
                   required
-                  value={confirmPassword}
+                  value={confirmPassword.trim()}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="Confirm your password"
