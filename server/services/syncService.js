@@ -1,0 +1,160 @@
+const pool = require('../db/connection');
+const GitHubService = require('./githubService');
+
+class SyncService {
+  constructor(githubToken) {
+    this.githubService = new GitHubService(githubToken);
+  }
+
+  async syncProject(projectId, owner, repo, projectNumber) {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Log sync start
+      const syncLogResult = await client.query(
+        `INSERT INTO sync_logs (project_id, sync_type, status, started_at) 
+         VALUES ($1, 'full', 'in_progress', NOW()) RETURNING id`,
+        [projectId]
+      );
+      const syncLogId = syncLogResult.rows[0].id;
+
+      // Fetch project items from GitHub
+      const itemsResult = await this.githubService.getProjectItems(owner, repo, projectNumber);
+      
+      if (!itemsResult.success) {
+        throw new Error(`GitHub API error: ${itemsResult.error}`);
+      }
+
+      const items = itemsResult.items;
+      let syncedCount = 0;
+
+      // Process each item
+      for (const item of items) {
+        await this.processWorkItem(client, projectId, item);
+        syncedCount++;
+      }
+
+      // Update sync log
+      await client.query(
+        `UPDATE sync_logs SET status = 'success', items_synced = $1, completed_at = NOW() WHERE id = $2`,
+        [syncedCount, syncLogId]
+      );
+
+      await client.query('COMMIT');
+      return { success: true, itemsSynced: syncedCount };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      
+      // Update sync log with error
+      await client.query(
+        `UPDATE sync_logs SET status = 'error', error_message = $1, completed_at = NOW() WHERE project_id = $2 AND status = 'in_progress'`,
+        [error.message, projectId]
+      );
+      
+      return { success: false, error: error.message };
+    } finally {
+      client.release();
+    }
+  }
+
+  async processWorkItem(client, projectId, item) {
+    if (!item.content) return;
+
+    const content = item.content;
+    const fieldValues = item.fieldValues?.nodes || [];
+
+    // Extract field values
+    const getFieldValue = (fieldName) => {
+      const field = fieldValues.find(fv => 
+        fv.field?.name?.toLowerCase() === fieldName.toLowerCase()
+      );
+      return field?.text || field?.name || field?.number || field?.date || null;
+    };
+
+    // Process assignees
+    let assigneeId = null;
+    if (content.assignees?.nodes?.length > 0) {
+      const assignee = content.assignees.nodes[0];
+      assigneeId = await this.ensureTeamMember(client, projectId, assignee);
+    }
+
+    // Prepare work item data
+    const workItemData = {
+      github_item_id: item.id,
+      github_issue_number: content.number || null,
+      title: content.title || 'Untitled',
+      status: getFieldValue('Status') || content.state || 'Unknown',
+      assignee_id: assigneeId,
+      size_estimate: getFieldValue('Size') || getFieldValue('Story Points') || getFieldValue('Estimate'),
+      priority: getFieldValue('Priority') || 'Medium',
+      item_type: item.type || 'Issue',
+      start_date: getFieldValue('Start Date') || null,
+      end_date: getFieldValue('End Date') || getFieldValue('Due Date') || null,
+      milestone: content.milestone?.title || null,
+      github_data: JSON.stringify(item)
+    };
+
+    // Upsert work item
+    await client.query(
+      `INSERT INTO work_items (
+        project_id, github_item_id, github_issue_number, title, status, 
+        assignee_id, size_estimate, priority, item_type, start_date, 
+        end_date, milestone, github_data, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+      ON CONFLICT (project_id, github_item_id) 
+      DO UPDATE SET 
+        title = EXCLUDED.title,
+        status = EXCLUDED.status,
+        assignee_id = EXCLUDED.assignee_id,
+        size_estimate = EXCLUDED.size_estimate,
+        priority = EXCLUDED.priority,
+        item_type = EXCLUDED.item_type,
+        start_date = EXCLUDED.start_date,
+        end_date = EXCLUDED.end_date,
+        milestone = EXCLUDED.milestone,
+        github_data = EXCLUDED.github_data,
+        updated_at = NOW()`,
+      [
+        projectId,
+        workItemData.github_item_id,
+        workItemData.github_issue_number,
+        workItemData.title,
+        workItemData.status,
+        workItemData.assignee_id,
+        workItemData.size_estimate,
+        workItemData.priority,
+        workItemData.item_type,
+        workItemData.start_date,
+        workItemData.end_date,
+        workItemData.milestone,
+        workItemData.github_data
+      ]
+    );
+  }
+
+  async ensureTeamMember(client, projectId, assignee) {
+    // Check if team member exists
+    const existingMember = await client.query(
+      `SELECT id FROM team_members WHERE project_id = $1 AND github_username = $2`,
+      [projectId, assignee.login]
+    );
+
+    if (existingMember.rows.length > 0) {
+      return existingMember.rows[0].id;
+    }
+
+    // Create new team member
+    const newMember = await client.query(
+      `INSERT INTO team_members (project_id, github_username, display_name, avatar_url)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [projectId, assignee.login, assignee.name || assignee.login, assignee.avatarUrl]
+    );
+
+    return newMember.rows[0].id;
+  }
+}
+
+module.exports = SyncService;
