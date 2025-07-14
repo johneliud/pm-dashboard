@@ -267,6 +267,26 @@ class AnalyticsService {
       return { success: false, error: error.message };
     }
   }
+
+  // Helper method to determine milestone status
+  getMilestoneStatus(milestone) {
+    const completionRate =
+      parseInt(milestone.completed_items) / parseInt(milestone.total_items);
+    const today = new Date();
+    const endDate = milestone.latest_end
+      ? new Date(milestone.latest_end)
+      : null;
+
+    if (completionRate >= 1.0) return 'completed';
+    if (endDate && endDate < today && completionRate < 1.0) return 'overdue';
+    if (
+      endDate &&
+      endDate <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000) &&
+      completionRate < 0.8
+    )
+      return 'at_risk';
+    return 'on_track';
+  }
 }
 
 module.exports = AnalyticsService;
