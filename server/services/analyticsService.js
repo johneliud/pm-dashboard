@@ -478,6 +478,46 @@ class AnalyticsService {
 
     return { level, score: Math.min(score, 100) };
   }
+
+  // Generate recommendations based on risk factors
+  generateRecommendations(factors) {
+    const recommendations = [];
+
+    if (factors.velocity_declining || factors.velocity_trend === 'declining') {
+      recommendations.push({
+        type: 'velocity',
+        priority: 'high',
+        message:
+          'Team velocity is declining. Consider reviewing workload and removing blockers.',
+      });
+    }
+
+    if (factors.long_blocked_items > 0) {
+      recommendations.push({
+        type: 'blockers',
+        priority: 'critical',
+        message: `${factors.long_blocked_items} items have been blocked for over 3 days. Immediate attention required.`,
+      });
+    }
+
+    if (factors.severely_overdue > 0) {
+      recommendations.push({
+        type: 'overdue',
+        priority: 'high',
+        message: `${factors.severely_overdue} items are severely overdue. Review scope and deadlines.`,
+      });
+    }
+
+    if (factors.blocked_items > 0 && factors.long_blocked_items === 0) {
+      recommendations.push({
+        type: 'blockers',
+        priority: 'medium',
+        message: `${factors.blocked_items} items are currently blocked. Monitor closely to prevent delays.`,
+      });
+    }
+
+    return recommendations;
+  }
 }
 
 module.exports = AnalyticsService;
