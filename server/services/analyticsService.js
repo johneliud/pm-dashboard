@@ -518,6 +518,79 @@ class AnalyticsService {
 
     return recommendations;
   }
+
+  // Get filtered analytics data
+  async getFilteredAnalytics(projectId, filters = {}) {
+    try {
+      const { startDate, endDate, assignee, status, milestone } = filters;
+
+      let whereClause = 'WHERE project_id = $1';
+      let params = [projectId];
+      let paramIndex = 2;
+
+      if (startDate) {
+        whereClause += ` AND updated_at >= $${paramIndex}`;
+        params.push(startDate);
+        paramIndex++;
+      }
+
+      if (endDate) {
+        whereClause += ` AND updated_at <= $${paramIndex}`;
+        params.push(endDate);
+        paramIndex++;
+      }
+
+      if (assignee) {
+        whereClause += ` AND assignee_id = $${paramIndex}`;
+        params.push(assignee);
+        paramIndex++;
+      }
+
+      if (status) {
+        whereClause += ` AND status = $${paramIndex}`;
+        params.push(status);
+        paramIndex++;
+      }
+
+      if (milestone) {
+        whereClause += ` AND milestone = $${paramIndex}`;
+        params.push(milestone);
+        paramIndex++;
+      }
+
+      const result = await pool.query(
+        `
+        SELECT 
+          COUNT(*) as total_items,
+          COUNT(CASE WHEN status IN ('Done', 'Completed', 'Closed') THEN 1 END) as completed_items,
+          AVG(COALESCE(size_estimate, 1)) as avg_size,
+          COUNT(DISTINCT assignee_id) as unique_assignees,
+          COUNT(DISTINCT milestone) as unique_milestones
+        FROM work_items 
+        ${whereClause}
+      `,
+        params
+      );
+
+      const data = result.rows[0];
+      return {
+        success: true,
+        data: {
+          total_items: parseInt(data.total_items),
+          completed_items: parseInt(data.completed_items),
+          completion_rate:
+            data.total_items > 0
+              ? Math.round((data.completed_items / data.total_items) * 100)
+              : 0,
+          avg_size: data.avg_size ? parseFloat(data.avg_size).toFixed(1) : 0,
+          unique_assignees: parseInt(data.unique_assignees),
+          unique_milestones: parseInt(data.unique_milestones),
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 module.exports = AnalyticsService;
