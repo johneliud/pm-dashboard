@@ -438,7 +438,21 @@ class AnalyticsService {
     }
   }
 
-  
+  // Analyze velocity trend
+  analyzeVelocityTrend(velocityData) {
+    if (velocityData.length < 2)
+      return { declining: false, trend: 'insufficient_data' };
+
+    const recent = velocityData[0].completed_items;
+    const previous = velocityData[1].completed_items;
+    const declining = recent < previous * 0.8; // 20% decline threshold
+
+    let trend = 'stable';
+    if (recent > previous * 1.2) trend = 'improving';
+    else if (declining) trend = 'declining';
+
+    return { declining, trend };
+  }
 }
 
 module.exports = AnalyticsService;
