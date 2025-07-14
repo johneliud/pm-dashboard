@@ -287,6 +287,62 @@ class AnalyticsService {
       return 'at_risk';
     return 'on_track';
   }
+
+  // Enhanced team workload with risk analysis
+  async getEnhancedTeamWorkload(projectId) {
+    try {
+      const result = await pool.query(
+        `
+        SELECT 
+          COALESCE(tm.display_name, tm.github_username, 'Unassigned') as assignee,
+          COUNT(*) as total_items,
+          COUNT(CASE WHEN wi.status IN ('Done', 'Completed', 'Closed') THEN 1 END) as completed_items,
+          COUNT(CASE WHEN wi.status IN ('In Progress', 'In Review') THEN 1 END) as in_progress_items,
+          COUNT(CASE WHEN wi.status IN ('Todo', 'Backlog', 'New') THEN 1 END) as todo_items,
+          SUM(COALESCE(wi.size_estimate, 1)) as total_points,
+          SUM(CASE WHEN wi.status IN ('Done', 'Completed', 'Closed') 
+              THEN COALESCE(wi.size_estimate, 1) ELSE 0 END) as completed_points,
+          AVG(CASE WHEN wi.status IN ('In Progress', 'In Review') AND wi.updated_at > NOW() - INTERVAL '7 days'
+              THEN EXTRACT(EPOCH FROM (NOW() - wi.updated_at))/86400 
+              ELSE NULL END) as avg_in_progress_days,
+          COUNT(CASE WHEN wi.status IN ('In Progress', 'In Review') 
+                     AND wi.updated_at < NOW() - INTERVAL '7 days' THEN 1 END) as stale_items
+        FROM work_items wi
+        LEFT JOIN team_members tm ON wi.assignee_id = tm.id
+        WHERE wi.project_id = $1
+        GROUP BY tm.display_name, tm.github_username, wi.assignee_id
+        ORDER BY total_items DESC
+      `,
+        [projectId]
+      );
+
+      const data = result.rows.map((row) => {
+        const completionRate =
+          parseInt(row.completed_items) / parseInt(row.total_items);
+        const workloadRisk = this.calculateWorkloadRisk(row);
+
+        return {
+          assignee: row.assignee,
+          total_items: parseInt(row.total_items),
+          completed_items: parseInt(row.completed_items),
+          in_progress_items: parseInt(row.in_progress_items),
+          todo_items: parseInt(row.todo_items),
+          total_points: parseInt(row.total_points),
+          completed_points: parseInt(row.completed_points),
+          completion_rate: Math.round(completionRate * 100),
+          avg_in_progress_days: row.avg_in_progress_days
+            ? Math.round(parseFloat(row.avg_in_progress_days))
+            : null,
+          stale_items: parseInt(row.stale_items),
+          workload_risk: workloadRisk,
+        };
+      });
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 module.exports = AnalyticsService;
