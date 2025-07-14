@@ -453,6 +453,31 @@ class AnalyticsService {
 
     return { declining, trend };
   }
+
+  // Calculate overall risk score
+  calculateOverallRisk(factors) {
+    let score = 0;
+
+    // Velocity risks
+    if (factors.velocity_declining) score += 30;
+    if (factors.velocity_trend === 'declining') score += 20;
+
+    // Blocker risks
+    if (factors.blocked_items > 0) score += factors.blocked_items * 5;
+    if (factors.long_blocked_items > 0)
+      score += factors.long_blocked_items * 15;
+
+    // Overdue risks
+    if (factors.overdue_items > 0) score += factors.overdue_items * 10;
+    if (factors.severely_overdue > 0) score += factors.severely_overdue * 25;
+
+    let level = 'low';
+    if (score >= 70) level = 'critical';
+    else if (score >= 40) level = 'high';
+    else if (score >= 20) level = 'medium';
+
+    return { level, score: Math.min(score, 100) };
+  }
 }
 
 module.exports = AnalyticsService;
