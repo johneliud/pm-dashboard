@@ -343,6 +343,21 @@ class AnalyticsService {
       return { success: false, error: error.message };
     }
   }
+
+  // Calculate workload risk level
+  calculateWorkloadRisk(member) {
+    const totalItems = parseInt(member.total_items);
+    const inProgressItems = parseInt(member.in_progress_items);
+    const staleItems = parseInt(member.stale_items);
+    const avgDays = member.avg_in_progress_days
+      ? parseFloat(member.avg_in_progress_days)
+      : 0;
+
+    // High risk indicators
+    if (staleItems > 2 || avgDays > 10 || inProgressItems > 5) return 'high';
+    if (staleItems > 0 || avgDays > 5 || inProgressItems > 3) return 'medium';
+    return 'low';
+  }
 }
 
 module.exports = AnalyticsService;
