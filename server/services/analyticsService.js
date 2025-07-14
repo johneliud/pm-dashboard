@@ -358,6 +358,87 @@ class AnalyticsService {
     if (staleItems > 0 || avgDays > 5 || inProgressItems > 3) return 'medium';
     return 'low';
   }
+
+  // At-risk project identification
+  async getAtRiskAnalysis(projectId) {
+    try {
+      const [velocityResult, blockerResult, overdueResult] = await Promise.all([
+        // Velocity trend analysis
+        pool.query(
+          `
+          SELECT 
+            DATE_TRUNC('week', updated_at) as week,
+            COUNT(*) as completed_items
+          FROM work_items 
+          WHERE project_id = $1 
+            AND status IN ('Done', 'Completed', 'Closed')
+            AND updated_at >= NOW() - INTERVAL '4 weeks'
+          GROUP BY DATE_TRUNC('week', updated_at)
+          ORDER BY week DESC
+          LIMIT 4
+        `,
+          [projectId]
+        ),
+
+        // Blocker analysis
+        pool.query(
+          `
+          SELECT 
+            COUNT(*) as total_blocked,
+            COUNT(CASE WHEN updated_at < NOW() - INTERVAL '3 days' THEN 1 END) as long_blocked
+          FROM work_items 
+          WHERE project_id = $1 
+            AND (status ILIKE '%blocked%' OR status ILIKE '%waiting%')
+        `,
+          [projectId]
+        ),
+
+        // Overdue analysis
+        pool.query(
+          `
+          SELECT 
+            COUNT(*) as overdue_items,
+            COUNT(CASE WHEN end_date < NOW() - INTERVAL '7 days' THEN 1 END) as severely_overdue
+          FROM work_items 
+          WHERE project_id = $1 
+            AND end_date < NOW()
+            AND status NOT IN ('Done', 'Completed', 'Closed')
+        `,
+          [projectId]
+        ),
+      ]);
+
+      // Calculate risk factors
+      const velocityTrend = this.analyzeVelocityTrend(velocityResult.rows);
+      const blockerData = blockerResult.rows[0];
+      const overdueData = overdueResult.rows[0];
+
+      const riskFactors = {
+        velocity_declining: velocityTrend.declining,
+        velocity_trend: velocityTrend.trend,
+        blocked_items: parseInt(blockerData.total_blocked),
+        long_blocked_items: parseInt(blockerData.long_blocked),
+        overdue_items: parseInt(overdueData.overdue_items),
+        severely_overdue: parseInt(overdueData.severely_overdue),
+      };
+
+      const overallRisk = this.calculateOverallRisk(riskFactors);
+
+      return {
+        success: true,
+        data: {
+          risk_level: overallRisk.level,
+          risk_score: overallRisk.score,
+          risk_factors: riskFactors,
+          recommendations: this.generateRecommendations(riskFactors),
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  
 }
 
 module.exports = AnalyticsService;
