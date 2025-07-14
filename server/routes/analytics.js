@@ -120,6 +120,85 @@ router.get('/:projectId/workload', authenticateToken, verifyProjectOwnership, as
   }
 });
 
+// Get milestone timeline
+router.get('/:projectId/milestones', authenticateToken, verifyProjectOwnership, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const analyticsService = new AnalyticsService();
+    
+    const result = await analyticsService.getMilestoneTimeline(projectId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Get milestone timeline error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get enhanced team workload
+router.get('/:projectId/enhanced-workload', authenticateToken, verifyProjectOwnership, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const analyticsService = new AnalyticsService();
+    
+    const result = await analyticsService.getEnhancedTeamWorkload(projectId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Get enhanced workload error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get at-risk analysis
+router.get('/:projectId/risk-analysis', authenticateToken, verifyProjectOwnership, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const analyticsService = new AnalyticsService();
+    
+    const result = await analyticsService.getAtRiskAnalysis(projectId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Get risk analysis error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get filtered analytics
+router.get('/:projectId/filtered', authenticateToken, verifyProjectOwnership, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { startDate, endDate, assignee, status, milestone } = req.query;
+    
+    const analyticsService = new AnalyticsService();
+    const filters = { startDate, endDate, assignee, status, milestone };
+    
+    const result = await analyticsService.getFilteredAnalytics(projectId, filters);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Get filtered analytics error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get project overview (combines multiple metrics)
 router.get('/:projectId/overview', authenticateToken, verifyProjectOwnership, async (req, res) => {
   try {
