@@ -74,21 +74,21 @@ const AnalyticsFilters = ({ onFiltersChange, teamMembers = [], milestones = [] }
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm border mb-6">
+    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="font-medium text-gray-900">Analytics Filters</h3>
+        <h3 className="font-medium text-gray-900 dark:text-white">Analytics Filters</h3>
         <div className="flex items-center gap-2">
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
-              className="text-sm text-red-600 hover:text-red-700"
+              className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
             >
               Clear All
             </button>
           )}
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-sm text-blue-600 hover:text-blue-700"
+            className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
           >
             {isExpanded ? 'Hide Filters' : 'Show Filters'}
           </button>
@@ -99,7 +99,7 @@ const AnalyticsFilters = ({ onFiltersChange, teamMembers = [], milestones = [] }
         <div className="space-y-4">
           {/* Date Range Presets */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Quick Date Ranges
             </label>
             <div className="flex flex-wrap gap-2">
@@ -112,7 +112,7 @@ const AnalyticsFilters = ({ onFiltersChange, teamMembers = [], milestones = [] }
                 <button
                   key={preset.key}
                   onClick={() => getPresetDateRange(preset.key)}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {preset.label}
                 </button>
@@ -123,7 +123,7 @@ const AnalyticsFilters = ({ onFiltersChange, teamMembers = [], milestones = [] }
           {/* Custom Date Range */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Start Date
               </label>
               <input
@@ -131,11 +131,11 @@ const AnalyticsFilters = ({ onFiltersChange, teamMembers = [], milestones = [] }
                 id="startDate"
                 value={filters.startDate}
                 onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
             <div>
-              <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 End Date
               </label>
               <input
@@ -143,7 +143,7 @@ const AnalyticsFilters = ({ onFiltersChange, teamMembers = [], milestones = [] }
                 id="endDate"
                 value={filters.endDate}
                 onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
           </div>
@@ -152,14 +152,14 @@ const AnalyticsFilters = ({ onFiltersChange, teamMembers = [], milestones = [] }
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Assignee Filter */}
             <div>
-              <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Assignee
               </label>
               <select
                 id="assignee"
                 value={filters.assignee}
                 onChange={(e) => handleFilterChange('assignee', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
               >
                 <option value="">All Assignees</option>
                 {teamMembers.map((member, index) => (
@@ -172,14 +172,14 @@ const AnalyticsFilters = ({ onFiltersChange, teamMembers = [], milestones = [] }
 
             {/* Status Filter */}
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Status
               </label>
               <select
                 id="status"
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
               >
                 <option value="">All Statuses</option>
                 {statusOptions.map(status => (
@@ -192,14 +192,14 @@ const AnalyticsFilters = ({ onFiltersChange, teamMembers = [], milestones = [] }
 
             {/* Milestone Filter */}
             <div>
-              <label htmlFor="milestone" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="milestone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Milestone
               </label>
               <select
                 id="milestone"
                 value={filters.milestone}
                 onChange={(e) => handleFilterChange('milestone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
               >
                 <option value="">All Milestones</option>
                 {milestones.map((milestone, index) => (
@@ -215,31 +215,31 @@ const AnalyticsFilters = ({ onFiltersChange, teamMembers = [], milestones = [] }
 
       {/* Active Filters Display */}
       {hasActiveFilters && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex flex-wrap gap-2">
-            <span className="text-sm text-gray-600">Active filters:</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Active filters:</span>
             {filters.startDate && (
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
                 From: {filters.startDate}
               </span>
             )}
             {filters.endDate && (
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
                 To: {filters.endDate}
               </span>
             )}
             {filters.assignee && (
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
                 Assignee: {teamMembers.find(m => m.id.toString() === filters.assignee)?.display_name || 'Unknown'}
               </span>
             )}
             {filters.status && (
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
                 Status: {filters.status}
               </span>
             )}
             {filters.milestone && (
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
                 Milestone: {filters.milestone}
               </span>
             )}
