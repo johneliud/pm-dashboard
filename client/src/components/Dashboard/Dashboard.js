@@ -139,7 +139,7 @@ const Dashboard = () => {
                     Sync Data
                   </button>
                   <button
-                    onClick={() => navigate(`/project/${project.id}`)}
+                    onClick={() => navigate(`/project/${project.id}/overview`)}
                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs sm:text-sm rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 font-medium"
                   >
                     View Analytics
