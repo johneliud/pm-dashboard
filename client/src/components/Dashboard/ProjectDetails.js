@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { usePreferences } from '../../context/PreferencesContext';
 import axios from 'axios';
 import BurndownChart from '../Charts/BurndownChart';
 import VelocityChart from '../Charts/VelocityChart';
@@ -9,10 +10,12 @@ import MilestoneTimeline from '../Charts/MilestoneTimeline';
 import RiskAnalysis from '../Charts/RiskAnalysis';
 import EnhancedWorkload from '../Charts/EnhancedWorkload';
 import AnalyticsFilters from './AnalyticsFilters';
+import LoadingSpinner from '../common/LoadingSpinner';
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  usePreferences(); // Enable theme context
   const [project, setProject] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [phase3Analytics, setPhase3Analytics] = useState({
@@ -133,7 +136,7 @@ const ProjectDetails = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg text-gray-600">Loading project analytics...</div>
+        <LoadingSpinner size="lg" text="Loading project analytics..." />
       </div>
     );
   }
@@ -155,29 +158,29 @@ const ProjectDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 gap-4">
+            <div className="flex items-start sm:items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="text-gray-600 hover:text-gray-900"
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 flex-shrink-0 mt-1 sm:mt-0"
               >
                 ← Back
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{project?.name}</h1>
-                <p className="text-sm text-gray-600">
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{project?.name}</h1>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
                   {project?.github_owner}/{project?.github_repo} (Project #{project?.github_project_number})
                 </p>
               </div>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-2 sm:gap-4 w-full sm:w-auto">
               <button
                 onClick={handleSyncProject}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium flex-1 sm:flex-none"
               >
                 Sync Data
               </button>
@@ -189,7 +192,7 @@ const ProjectDetails = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+          <div className="mb-6 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 px-4 py-3 rounded">
             {error}
           </div>
         )}
@@ -202,9 +205,9 @@ const ProjectDetails = () => {
         />
 
         {/* Analytics Grid */}
-        <div className="grid gap-6">
+        <div className="grid gap-4 sm:gap-6">
           {/* Progress Overview & Risk Analysis */}
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <ProgressCard data={analytics?.progress} />
             <RiskAnalysis data={phase3Analytics.riskAnalysis} />
           </div>
@@ -213,13 +216,13 @@ const ProjectDetails = () => {
           <MilestoneTimeline data={phase3Analytics.milestones} />
 
           {/* Charts Row 1 */}
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             <BurndownChart data={analytics?.burndown} />
             <VelocityChart data={analytics?.velocity} />
           </div>
 
           {/* Charts Row 2 */}
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             <StatusDistribution data={analytics?.status_distribution} />
             <EnhancedWorkload data={phase3Analytics.enhancedWorkload} />
           </div>
@@ -228,8 +231,8 @@ const ProjectDetails = () => {
         {/* No Data Message */}
         {(!analytics?.progress && !analytics?.status_distribution && !analytics?.velocity) && (
           <div className="text-center py-12">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">No Analytics Data</h2>
-            <p className="text-gray-600 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Analytics Data</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Sync your project data to see charts and analytics
             </p>
             <button
