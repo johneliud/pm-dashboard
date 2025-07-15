@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PreferencesProvider } from './context/PreferencesContext';
 import LoginForm from './components/Auth/LoginForm';
 import RegisterForm from './components/Auth/RegisterForm';
 import Dashboard from './components/Dashboard/Dashboard';
 import ProjectDetails from './components/Dashboard/ProjectDetails';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import LoadingSpinner from './components/common/LoadingSpinner';
 import './App.css';
 
 function AuthWrapper() {
@@ -14,7 +17,7 @@ function AuthWrapper() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg text-gray-600">Loading...</div>
+        <LoadingSpinner size="lg" text="Loading application..." />
       </div>
     );
   }
@@ -38,11 +41,15 @@ function AuthWrapper() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AuthWrapper />
-      </Router>
-    </AuthProvider>
+    <ErrorBoundary>
+      <PreferencesProvider>
+        <AuthProvider>
+          <Router>
+            <AuthWrapper />
+          </Router>
+        </AuthProvider>
+      </PreferencesProvider>
+    </ErrorBoundary>
   );
 }
 
