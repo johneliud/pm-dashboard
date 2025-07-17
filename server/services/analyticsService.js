@@ -1,28 +1,74 @@
 const pool = require('../db/connection');
 
 class AnalyticsService {
-  // Get project progress percentage
+  // Get project progress percentage with MVP formula
   async getProjectProgress(projectId) {
     try {
-      const result = await pool.query(
-        `
-        SELECT 
-          COUNT(*) as total_items,
-          COUNT(CASE WHEN status IN ('Done', 'Completed', 'Closed') THEN 1 END) as completed_items,
-          COUNT(CASE WHEN status IN ('In Progress', 'In Review') THEN 1 END) as in_progress_items,
-          COUNT(CASE WHEN status IN ('Todo', 'Backlog', 'New') THEN 1 END) as todo_items
-        FROM work_items 
-        WHERE project_id = $1
-      `,
-        [projectId]
-      );
+      const [itemsResult, projectResult] = await Promise.all([
+        pool.query(
+          `
+          SELECT 
+            COUNT(*) as total_items,
+            COUNT(CASE WHEN status IN ('Done', 'Completed', 'Closed') THEN 1 END) as completed_items,
+            COUNT(CASE WHEN status IN ('In Progress', 'In Review') THEN 1 END) as in_progress_items,
+            COUNT(CASE WHEN status IN ('Todo', 'Backlog', 'New') THEN 1 END) as todo_items,
+            SUM(COALESCE(size_estimate, 1)) as total_points,
+            SUM(CASE WHEN status IN ('Done', 'Completed', 'Closed') 
+                THEN COALESCE(size_estimate, 1) ELSE 0 END) as completed_points,
+            MIN(start_date) as project_start_date,
+            MAX(end_date) as project_end_date
+          FROM work_items 
+          WHERE project_id = $1
+        `,
+          [projectId]
+        ),
+        pool.query(
+          `SELECT created_at FROM projects WHERE id = $1`,
+          [projectId]
+        )
+      ]);
 
-      const data = result.rows[0];
+      const data = itemsResult.rows[0];
+      const projectData = projectResult.rows[0];
+      
       const totalItems = parseInt(data.total_items);
       const completedItems = parseInt(data.completed_items);
+      const totalPoints = parseInt(data.total_points) || 0;
+      const completedPoints = parseInt(data.completed_points) || 0;
 
-      const progressPercentage =
-        totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+      // Calculate work progress
+      const workProgress = totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0;
+      
+      // Calculate schedule progress based on MVP formula
+      let scheduleProgress = 0;
+      let healthStatus = 'Unknown';
+      
+      if (data.project_start_date && data.project_end_date) {
+        const startDate = new Date(data.project_start_date);
+        const endDate = new Date(data.project_end_date);
+        const currentDate = new Date();
+        
+        const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+        const daysPassed = Math.max(0, Math.ceil((currentDate - startDate) / (1000 * 60 * 60 * 24)));
+        
+        if (totalDays > 0) {
+          scheduleProgress = Math.min(100, Math.round((daysPassed / totalDays) * 100));
+        }
+        
+        // MVP health status calculation
+        if (workProgress >= scheduleProgress) {
+          healthStatus = 'On Track';
+        } else if (workProgress >= scheduleProgress - 10) {
+          healthStatus = 'At Risk';
+        } else {
+          healthStatus = 'Behind Schedule';
+        }
+      } else {
+        // Fallback to simple progress calculation
+        const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+        scheduleProgress = progressPercentage;
+        healthStatus = 'On Track';
+      }
 
       return {
         success: true,
@@ -31,7 +77,13 @@ class AnalyticsService {
           completed_items: completedItems,
           in_progress_items: parseInt(data.in_progress_items),
           todo_items: parseInt(data.todo_items),
-          progress_percentage: progressPercentage,
+          total_points: totalPoints,
+          completed_points: completedPoints,
+          work_progress: workProgress,
+          schedule_progress: scheduleProgress,
+          health_status: healthStatus,
+          project_start_date: data.project_start_date,
+          project_end_date: data.project_end_date,
         },
       };
     } catch (error) {
