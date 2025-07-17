@@ -30,49 +30,48 @@ const ProgressIndicators = ({ data, riskData, project }) => {
       completed_items,
       in_progress_items,
       todo_items,
-      progress_percentage
+      total_points,
+      completed_points,
+      work_progress,
+      schedule_progress,
+      health_status
     } = data.progress;
 
     /**
      * CALCULATION 1: Progress Percentage
-     * Formula: (Completed Items / Total Items) * 100
+     * Formula: (Completed Points / Total Points) * 100
      * 
-     * This gives us the actual completion rate based on work items.
-     * Note: We use the backend-calculated value to ensure consistency
-     * across all dashboard components.
+     * Using the MVP formula for progress tracking based on story points/size estimates
+     * This provides a more accurate view of actual work completion vs simple item count
      */
-    const actualProgress = progress_percentage || 0;
+    const actualProgress = work_progress || 0;
+    const scheduleProgress = schedule_progress || 0;
 
     /**
-     * CALCULATION 2: Expected Progress (Time-based)
+     * CALCULATION 2: Schedule vs Work Progress (MVP Formula)
      * 
-     * If we have project timeline data, calculate where we should be
-     * based on elapsed time vs total project duration.
+     * Using the MVP guide's formula for health status:
+     * - workProgress >= scheduleProgress: 'On Track'
+     * - workProgress < scheduleProgress: 'At Risk' or 'Behind Schedule'
      * 
-     * Formula: (Days Elapsed / Total Project Days) * 100
-     * 
-     * For now, using simplified approach since we don't have explicit
-     * project start/end dates. Future enhancement: Add project timeline tracking.
+     * This is calculated on the backend using actual project start/end dates
      */
-    let expectedProgress = null;
+    let expectedProgress = scheduleProgress;
     let timeBasedHealth = 'unknown';
     
-    // Simplified time-based calculation using project creation date
-    if (project?.created_at) {
-      const projectStart = new Date(project.created_at);
-      const now = new Date();
-      const daysSinceStart = Math.floor((now - projectStart) / (1000 * 60 * 60 * 24));
-      
-      // Assume 30-day sprint cycles for expected progress calculation
-      // This is a simplified approach - in real scenarios, use actual sprint/milestone dates
-      const assumedProjectDuration = 90; // 90 days (3 sprints)
-      expectedProgress = Math.min((daysSinceStart / assumedProjectDuration) * 100, 100);
-      
-      // Health determination based on actual vs expected progress
-      const progressGap = actualProgress - expectedProgress;
-      if (progressGap >= 10) timeBasedHealth = 'ahead';
-      else if (progressGap >= -10) timeBasedHealth = 'on_track';
-      else timeBasedHealth = 'behind';
+    // Map the backend health status to our time-based health categories
+    switch (health_status) {
+      case 'On Track':
+        timeBasedHealth = 'on_track';
+        break;
+      case 'At Risk':
+        timeBasedHealth = 'at_risk';
+        break;
+      case 'Behind Schedule':
+        timeBasedHealth = 'behind';
+        break;
+      default:
+        timeBasedHealth = 'unknown';
     }
 
     /**
@@ -209,126 +208,201 @@ const ProgressIndicators = ({ data, riskData, project }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Overall Progress */}
-      <div className={`rounded-lg border p-6 ${healthColors.bg} ${healthColors.border}`}>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className={`text-sm font-medium ${healthColors.text}`}>Overall Progress</h3>
-          <span className="text-lg">{healthColors.icon}</span>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Overall Progress */}
+        <div className={`rounded-lg border p-6 ${healthColors.bg} ${healthColors.border}`}>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className={`text-sm font-medium ${healthColors.text}`}>Overall Progress</h3>
+            <span className="text-lg">{healthColors.icon}</span>
+          </div>
+          <div className={`text-2xl font-bold ${healthColors.text} mb-1`}>
+            {metrics.progressPercentage.toFixed(1)}%
+          </div>
+          <div className={`text-xs ${healthColors.text} opacity-75`}>
+            {healthColors.label}
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="mt-3">
+            <div className="w-full bg-white dark:bg-gray-700 rounded-full h-2 opacity-50">
+              <div 
+                className="h-2 rounded-full bg-current transition-all duration-300"
+                style={{ width: `${Math.min(metrics.progressPercentage, 100)}%` }}
+              ></div>
+            </div>
+          </div>
         </div>
-        <div className={`text-2xl font-bold ${healthColors.text} mb-1`}>
-          {metrics.progressPercentage.toFixed(1)}%
-        </div>
-        <div className={`text-xs ${healthColors.text} opacity-75`}>
-          {healthColors.label}
-        </div>
-        
-        {/* Progress Bar */}
-        <div className="mt-3">
-          <div className="w-full bg-white dark:bg-gray-700 rounded-full h-2 opacity-50">
+
+        {/* Work Items Summary */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Work Items</h3>
+            <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            {metrics.completedItems} / {metrics.totalItems}
+          </div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            {metrics.inProgressItems} in progress, {metrics.todoItems} remaining
+          </div>
+          
+          {/* Story Points Summary */}
+          {data.progress?.total_points && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {data.progress.completed_points} / {data.progress.total_points} story points
+            </div>
+          )}
+          
+          {/* Mini Progress Breakdown */}
+          <div className="mt-3 flex gap-1">
             <div 
-              className="h-2 rounded-full bg-current transition-all duration-300"
-              style={{ width: `${Math.min(metrics.progressPercentage, 100)}%` }}
+              className="h-2 bg-green-500 rounded-l"
+              style={{ width: `${(metrics.completedItems / metrics.totalItems) * 100}%` }}
+            ></div>
+            <div 
+              className="h-2 bg-blue-500"
+              style={{ width: `${(metrics.inProgressItems / metrics.totalItems) * 100}%` }}
+            ></div>
+            <div 
+              className="h-2 bg-gray-300 dark:bg-gray-600 rounded-r"
+              style={{ width: `${(metrics.todoItems / metrics.totalItems) * 100}%` }}
             ></div>
           </div>
         </div>
-      </div>
 
-      {/* Work Items Summary */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Work Items</h3>
-          <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-        </div>
-        <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-          {metrics.completedItems} / {metrics.totalItems}
-        </div>
-        <div className="text-xs text-gray-600 dark:text-gray-400">
-          {metrics.inProgressItems} in progress, {metrics.todoItems} remaining
-        </div>
-        
-        {/* Mini Progress Breakdown */}
-        <div className="mt-3 flex gap-1">
-          <div 
-            className="h-2 bg-green-500 rounded-l"
-            style={{ width: `${(metrics.completedItems / metrics.totalItems) * 100}%` }}
-          ></div>
-          <div 
-            className="h-2 bg-blue-500"
-            style={{ width: `${(metrics.inProgressItems / metrics.totalItems) * 100}%` }}
-          ></div>
-          <div 
-            className="h-2 bg-gray-300 dark:bg-gray-600 rounded-r"
-            style={{ width: `${(metrics.todoItems / metrics.totalItems) * 100}%` }}
-          ></div>
-        </div>
-      </div>
-
-      {/* Risk Assessment */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Risk Level</h3>
-          <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-        </div>
-        <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-          {metrics.riskScore}/100
-        </div>
-        <div className={`text-xs capitalize ${
-          metrics.riskLevel === 'low' ? 'text-green-600' :
-          metrics.riskLevel === 'medium' ? 'text-yellow-600' :
-          metrics.riskLevel === 'high' ? 'text-orange-600' :
-          metrics.riskLevel === 'critical' ? 'text-red-600' :
-          'text-gray-600 dark:text-gray-400'
-        }`}>
-          {metrics.riskLevel.replace('_', ' ')} risk
-        </div>
-        
-        {/* Risk Level Bar */}
-        <div className="mt-3">
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div 
-              className={`h-2 rounded-full transition-all duration-300 ${
-                metrics.riskLevel === 'low' ? 'bg-green-500' :
-                metrics.riskLevel === 'medium' ? 'bg-yellow-500' :
-                metrics.riskLevel === 'high' ? 'bg-orange-500' :
-                'bg-red-500'
-              }`}
-              style={{ width: `${metrics.riskScore}%` }}
-            ></div>
+        {/* Risk Assessment */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Risk Level</h3>
+            <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            {metrics.riskScore}/100
+          </div>
+          <div className={`text-xs capitalize ${
+            metrics.riskLevel === 'low' ? 'text-green-600' :
+            metrics.riskLevel === 'medium' ? 'text-yellow-600' :
+            metrics.riskLevel === 'high' ? 'text-orange-600' :
+            metrics.riskLevel === 'critical' ? 'text-red-600' :
+            'text-gray-600 dark:text-gray-400'
+          }`}>
+            {metrics.riskLevel.replace('_', ' ')} risk
+          </div>
+          
+          {/* Risk Level Bar */}
+          <div className="mt-3">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div 
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  metrics.riskLevel === 'low' ? 'bg-green-500' :
+                  metrics.riskLevel === 'medium' ? 'bg-yellow-500' :
+                  metrics.riskLevel === 'high' ? 'bg-orange-500' :
+                  'bg-red-500'
+                }`}
+                style={{ width: `${metrics.riskScore}%` }}
+              ></div>
+            </div>
           </div>
         </div>
+
+        {/* Velocity & Forecast */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Completion Velocity</h3>
+            <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          </div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            {metrics.completionVelocity}
+          </div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            items per day
+          </div>
+          
+          {/* Forecast */}
+          {metrics.estimatedDaysToComplete && (
+            <div className="mt-2 text-xs">
+              <span className="text-gray-600 dark:text-gray-400">Est. completion: </span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {metrics.estimatedDaysToComplete} days
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Velocity & Forecast */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Completion Velocity</h3>
-          <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-          </svg>
-        </div>
-        <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-          {metrics.completionVelocity}
-        </div>
-        <div className="text-xs text-gray-600 dark:text-gray-400">
-          items per day
-        </div>
-        
-        {/* Forecast */}
-        {metrics.estimatedDaysToComplete && (
-          <div className="mt-2 text-xs">
-            <span className="text-gray-600 dark:text-gray-400">Est. completion: </span>
-            <span className="font-medium text-gray-900 dark:text-white">
-              {metrics.estimatedDaysToComplete} days
-            </span>
+      {/* Schedule vs Work Progress Comparison */}
+      {metrics.expectedProgress !== null && (
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Schedule vs Work Progress (MVP Formula)
+            </h3>
+            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+              metrics.timeBasedHealth === 'on_track' ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-200' :
+              metrics.timeBasedHealth === 'at_risk' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/20 dark:text-yellow-200' :
+              metrics.timeBasedHealth === 'behind' ? 'bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-200' :
+              'bg-gray-100 text-gray-800 dark:bg-gray-800/20 dark:text-gray-200'
+            }`}>
+              {data.progress?.health_status || 'Unknown'}
+            </div>
           </div>
-        )}
-      </div>
-    </div>
+          
+          <div className="grid grid-cols-2 gap-6">
+            {/* Work Progress */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Work Progress</span>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{metrics.progressPercentage.toFixed(1)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                <div 
+                  className="h-3 bg-blue-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(metrics.progressPercentage, 100)}%` }}
+                ></div>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Based on completed story points
+              </div>
+            </div>
+            
+            {/* Schedule Progress */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Schedule Progress</span>
+                <span className="text-lg font-bold text-purple-600 dark:text-purple-400">{metrics.expectedProgress.toFixed(1)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                <div 
+                  className="h-3 bg-purple-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(metrics.expectedProgress, 100)}%` }}
+                ></div>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Based on elapsed time
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              <strong>MVP Formula:</strong> {metrics.progressPercentage >= metrics.expectedProgress ? 'Work progress ≥ Schedule progress' : 'Work progress < Schedule progress'}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {metrics.progressPercentage >= metrics.expectedProgress 
+                ? 'Project is on track or ahead of schedule' 
+                : `Project is ${(metrics.expectedProgress - metrics.progressPercentage).toFixed(1)}% behind schedule`}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
