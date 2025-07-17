@@ -48,6 +48,9 @@ CREATE TABLE IF NOT EXISTS work_items (
     start_date DATE,
     end_date DATE,
     milestone VARCHAR(255),
+    iteration_title VARCHAR(255),
+    iteration_start_date DATE,
+    iteration_duration INTEGER,
     github_data JSONB, -- Store full GitHub API response
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -67,10 +70,16 @@ CREATE TABLE IF NOT EXISTS sync_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Add iteration fields if they don't exist (for existing databases)
+ALTER TABLE work_items ADD COLUMN IF NOT EXISTS iteration_title VARCHAR(255);
+ALTER TABLE work_items ADD COLUMN IF NOT EXISTS iteration_start_date DATE;
+ALTER TABLE work_items ADD COLUMN IF NOT EXISTS iteration_duration INTEGER;
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_work_items_project_id ON work_items(project_id);
 CREATE INDEX IF NOT EXISTS idx_work_items_status ON work_items(status);
 CREATE INDEX IF NOT EXISTS idx_work_items_assignee ON work_items(assignee_id);
 CREATE INDEX IF NOT EXISTS idx_work_items_updated_at ON work_items(updated_at);
+CREATE INDEX IF NOT EXISTS idx_work_items_iteration ON work_items(iteration_title);
 CREATE INDEX IF NOT EXISTS idx_team_members_project_id ON team_members(project_id);
 CREATE INDEX IF NOT EXISTS idx_sync_logs_project_id ON sync_logs(project_id);
