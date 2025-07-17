@@ -237,7 +237,7 @@ class AnalyticsService {
           MIN(start_date) as earliest_start,
           MAX(end_date) as latest_end,
           AVG(CASE WHEN status IN ('Done', 'Completed', 'Closed') AND end_date IS NOT NULL 
-              THEN EXTRACT(EPOCH FROM (updated_at::date - start_date))/86400 
+              THEN EXTRACT(EPOCH FROM (updated_at::timestamp - start_date::timestamp))/86400 
               ELSE NULL END) as avg_completion_days
         FROM work_items 
         WHERE project_id = $1 AND milestone IS NOT NULL
@@ -303,7 +303,7 @@ class AnalyticsService {
           SUM(CASE WHEN wi.status IN ('Done', 'Completed', 'Closed') 
               THEN COALESCE(wi.size_estimate, 1) ELSE 0 END) as completed_points,
           AVG(CASE WHEN wi.status IN ('In Progress', 'In Review') AND wi.updated_at > NOW() - INTERVAL '7 days'
-              THEN EXTRACT(EPOCH FROM (NOW() - wi.updated_at))/86400 
+              THEN EXTRACT(EPOCH FROM (NOW()::timestamp - wi.updated_at::timestamp))/86400 
               ELSE NULL END) as avg_in_progress_days,
           COUNT(CASE WHEN wi.status IN ('In Progress', 'In Review') 
                      AND wi.updated_at < NOW() - INTERVAL '7 days' THEN 1 END) as stale_items
