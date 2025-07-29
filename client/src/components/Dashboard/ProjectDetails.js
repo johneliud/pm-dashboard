@@ -11,6 +11,7 @@ import RiskAnalysis from '../Charts/RiskAnalysis';
 import EnhancedWorkload from '../Charts/EnhancedWorkload';
 import AnalyticsFilters from './AnalyticsFilters';
 import LoadingSpinner from '../common/LoadingSpinner';
+import config from '../../config';
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
@@ -29,7 +30,7 @@ const ProjectDetails = () => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [milestones, setMilestones] = useState([]);
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_BASE_URL = config.API_BASE_URL;
 
   useEffect(() => {
     fetchProjectData();

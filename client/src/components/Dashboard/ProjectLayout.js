@@ -8,6 +8,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import Toast from '../common/Toast';
 import useToast from '../../hooks/useToast';
 import axios from 'axios';
+import config from '../../config';
 
 const ProjectLayout = () => {
   const { projectId } = useParams();
@@ -22,7 +23,7 @@ const ProjectLayout = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_BASE_URL = config.API_BASE_URL;
 
   useEffect(() => {
     fetchProjectData();

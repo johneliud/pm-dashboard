@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import config from '../../config';
 
 const ProjectForm = ({ onProjectCreated, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -17,7 +18,7 @@ const ProjectForm = ({ onProjectCreated, onCancel }) => {
     setError('');
 
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const API_BASE_URL = config.API_BASE_URL;
       const response = await axios.post(`${API_BASE_URL}/projects`, {
         name: formData.name.trim(),
         githubOwner: formData.githubOwner.trim(),
