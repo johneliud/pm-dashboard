@@ -199,6 +199,63 @@ router.get('/:projectId/filtered', authenticateToken, verifyProjectOwnership, as
   }
 });
 
+// Get active sprint summary
+router.get('/:projectId/sprint-summary', authenticateToken, verifyProjectOwnership, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const analyticsService = new AnalyticsService();
+    
+    const result = await analyticsService.getActiveSprintSummary(projectId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Get sprint summary error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get sprint comparison data
+router.get('/:projectId/sprint-comparison', authenticateToken, verifyProjectOwnership, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const analyticsService = new AnalyticsService();
+    
+    const result = await analyticsService.getSprintComparison(projectId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Get sprint comparison error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get sprint scope changes
+router.get('/:projectId/sprint-scope-changes', authenticateToken, verifyProjectOwnership, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const analyticsService = new AnalyticsService();
+    
+    const result = await analyticsService.getSprintScopeChanges(projectId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Get sprint scope changes error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get project overview (combines multiple metrics)
 router.get('/:projectId/overview', authenticateToken, verifyProjectOwnership, async (req, res) => {
   try {

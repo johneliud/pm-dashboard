@@ -49,6 +49,9 @@ async function startServer() {
       console.log('  GET  /api/analytics/:projectId/enhanced-workload');
       console.log('  GET  /api/analytics/:projectId/risk-analysis');
       console.log('  GET  /api/analytics/:projectId/filtered');
+      console.log('  GET  /api/analytics/:projectId/sprint-summary');
+      console.log('  GET  /api/analytics/:projectId/sprint-comparison');
+      console.log('  GET  /api/analytics/:projectId/sprint-scope-changes');
       console.log('  GET  /api/analytics/:projectId/overview');
     });
   } catch (error) {

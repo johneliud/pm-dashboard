@@ -643,6 +643,230 @@ class AnalyticsService {
       return { success: false, error: error.message };
     }
   }
+
+  // Get active sprint summary
+  async getActiveSprintSummary(projectId) {
+    try {
+      // Find the most recent/active sprint
+      const activeSprintResult = await pool.query(
+        `
+        SELECT 
+          iteration_title,
+          iteration_start_date,
+          iteration_duration,
+          COUNT(*) as total_items,
+          COUNT(CASE WHEN status IN ('Done', 'Completed', 'Closed') THEN 1 END) as completed_items,
+          COUNT(CASE WHEN status IN ('In Progress', 'In Review') THEN 1 END) as in_progress_items,
+          SUM(COALESCE(size_estimate, 1)) as total_points,
+          SUM(CASE WHEN status IN ('Done', 'Completed', 'Closed') 
+              THEN COALESCE(size_estimate, 1) ELSE 0 END) as completed_points
+        FROM work_items 
+        WHERE project_id = $1 
+          AND iteration_title IS NOT NULL
+          AND iteration_start_date IS NOT NULL
+        GROUP BY iteration_title, iteration_start_date, iteration_duration
+        ORDER BY iteration_start_date DESC
+        LIMIT 1
+      `,
+        [projectId]
+      );
+
+      if (activeSprintResult.rows.length === 0) {
+        return {
+          success: true,
+          data: null
+        };
+      }
+
+      const sprint = activeSprintResult.rows[0];
+      const startDate = new Date(sprint.iteration_start_date);
+      const endDate = new Date(startDate.getTime() + (sprint.iteration_duration * 24 * 60 * 60 * 1000));
+      const currentDate = new Date();
+      
+      const totalDays = sprint.iteration_duration;
+      const daysPassed = Math.max(0, Math.ceil((currentDate - startDate) / (1000 * 60 * 60 * 24)));
+      const daysRemaining = Math.max(0, totalDays - daysPassed);
+      
+      // Calculate completion forecast
+      const currentVelocity = daysPassed > 0 ? parseInt(sprint.completed_points) / daysPassed : 0;
+      const forecastCompletion = currentVelocity > 0 ? 
+        Math.min(100, Math.round((currentVelocity * totalDays / parseInt(sprint.total_points)) * 100)) : 0;
+
+      return {
+        success: true,
+        data: {
+          iteration_title: sprint.iteration_title,
+          start_date: sprint.iteration_start_date,
+          end_date: endDate.toISOString().split('T')[0],
+          duration_days: totalDays,
+          days_passed: daysPassed,
+          days_remaining: daysRemaining,
+          total_items: parseInt(sprint.total_items),
+          completed_items: parseInt(sprint.completed_items),
+          in_progress_items: parseInt(sprint.in_progress_items),
+          total_points: parseInt(sprint.total_points),
+          completed_points: parseInt(sprint.completed_points),
+          completion_percentage: parseInt(sprint.total_points) > 0 ? 
+            Math.round((parseInt(sprint.completed_points) / parseInt(sprint.total_points)) * 100) : 0,
+          schedule_percentage: totalDays > 0 ? Math.round((daysPassed / totalDays) * 100) : 0,
+          forecast_completion: forecastCompletion,
+          status: this.getSprintStatus(daysPassed, totalDays, parseInt(sprint.completed_points), parseInt(sprint.total_points))
+        }
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get sprint comparison data
+  async getSprintComparison(projectId) {
+    try {
+      const result = await pool.query(
+        `
+        SELECT 
+          iteration_title,
+          iteration_start_date,
+          iteration_duration,
+          COUNT(*) as total_items,
+          COUNT(CASE WHEN status IN ('Done', 'Completed', 'Closed') THEN 1 END) as completed_items,
+          SUM(COALESCE(size_estimate, 1)) as total_points,
+          SUM(CASE WHEN status IN ('Done', 'Completed', 'Closed') 
+              THEN COALESCE(size_estimate, 1) ELSE 0 END) as completed_points
+        FROM work_items 
+        WHERE project_id = $1 
+          AND iteration_title IS NOT NULL
+          AND iteration_start_date IS NOT NULL
+        GROUP BY iteration_title, iteration_start_date, iteration_duration
+        ORDER BY iteration_start_date DESC
+        LIMIT 6
+      `,
+        [projectId]
+      );
+
+      const sprints = result.rows.map(sprint => {
+        const totalPoints = parseInt(sprint.total_points);
+        const completedPoints = parseInt(sprint.completed_points);
+        const velocity = sprint.iteration_duration > 0 ? completedPoints / sprint.iteration_duration : 0;
+        
+        return {
+          iteration_title: sprint.iteration_title,
+          start_date: sprint.iteration_start_date,
+          duration_days: sprint.iteration_duration,
+          total_items: parseInt(sprint.total_items),
+          completed_items: parseInt(sprint.completed_items),
+          total_points: totalPoints,
+          completed_points: completedPoints,
+          completion_percentage: totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0,
+          velocity: Math.round(velocity * 10) / 10 // Round to 1 decimal place
+        };
+      });
+
+      // Calculate averages
+      const avgVelocity = sprints.length > 0 ? 
+        sprints.reduce((sum, s) => sum + s.velocity, 0) / sprints.length : 0;
+      const avgCompletion = sprints.length > 0 ? 
+        sprints.reduce((sum, s) => sum + s.completion_percentage, 0) / sprints.length : 0;
+
+      return {
+        success: true,
+        data: {
+          sprints: sprints.reverse(), // Show oldest to newest
+          averages: {
+            velocity: Math.round(avgVelocity * 10) / 10,
+            completion_percentage: Math.round(avgCompletion)
+          }
+        }
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get scope changes for active sprint
+  async getSprintScopeChanges(projectId) {
+    try {
+      // Get the active sprint
+      const activeSprintResult = await pool.query(
+        `
+        SELECT iteration_title, iteration_start_date
+        FROM work_items 
+        WHERE project_id = $1 
+          AND iteration_title IS NOT NULL
+          AND iteration_start_date IS NOT NULL
+        ORDER BY iteration_start_date DESC
+        LIMIT 1
+      `,
+        [projectId]
+      );
+
+      if (activeSprintResult.rows.length === 0) {
+        return { success: true, data: { added: [], removed: [], summary: { added_count: 0, removed_count: 0, net_change: 0 } } };
+      }
+
+      const activeSprint = activeSprintResult.rows[0];
+      const sprintStartDate = new Date(activeSprint.iteration_start_date);
+
+      // Items added to sprint (created after sprint start with this iteration)
+      const addedItemsResult = await pool.query(
+        `
+        SELECT title, size_estimate, created_at, status
+        FROM work_items 
+        WHERE project_id = $1 
+          AND iteration_title = $2
+          AND created_at >= $3
+        ORDER BY created_at DESC
+      `,
+        [projectId, activeSprint.iteration_title, sprintStartDate]
+      );
+
+      // For scope changes, we'd ideally track when items were moved in/out of sprints
+      // Since we don't have that history, we'll show recently added items as proxy
+      const addedItems = addedItemsResult.rows.map(item => ({
+        title: item.title,
+        size_estimate: item.size_estimate || 1,
+        added_date: item.created_at,
+        status: item.status
+      }));
+
+      return {
+        success: true,
+        data: {
+          active_sprint: activeSprint.iteration_title,
+          sprint_start_date: sprintStartDate.toISOString().split('T')[0],
+          added: addedItems,
+          removed: [], // Would need change history to track removed items
+          summary: {
+            added_count: addedItems.length,
+            removed_count: 0,
+            net_change: addedItems.length,
+            added_points: addedItems.reduce((sum, item) => sum + item.size_estimate, 0)
+          }
+        }
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Helper method to determine sprint status
+  getSprintStatus(daysPassed, totalDays, completedPoints, totalPoints) {
+    if (totalDays === 0) return 'not_started';
+    
+    const scheduleProgress = daysPassed / totalDays;
+    const workProgress = totalPoints > 0 ? completedPoints / totalPoints : 0;
+    
+    if (daysPassed >= totalDays) {
+      return workProgress >= 0.9 ? 'completed' : 'overdue';
+    }
+    
+    if (workProgress >= scheduleProgress) {
+      return 'on_track';
+    } else if (workProgress >= scheduleProgress - 0.2) {
+      return 'at_risk';
+    } else {
+      return 'behind_schedule';
+    }
+  }
 }
 
 module.exports = AnalyticsService;
