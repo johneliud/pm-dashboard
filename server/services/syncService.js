@@ -78,12 +78,37 @@ class SyncService {
       const content = item.content;
       const fieldValues = item.fieldValues?.nodes || [];
 
-    // Extract field values
+    // Extract field values with better handling
     const getFieldValue = (fieldName) => {
       const field = fieldValues.find(fv => 
         fv.field?.name?.toLowerCase() === fieldName.toLowerCase()
       );
-      return field?.text || field?.name || field?.number || field?.date || null;
+      
+      // Handle different field types
+      if (field?.text) return field.text;
+      if (field?.name) return field.name;
+      if (field?.number) return field.number;
+      if (field?.date) return field.date;
+      if (field?.title) return field.title; // For iteration fields
+      
+      return null;
+    };
+
+    // Get iteration/sprint information
+    const getIterationField = (fieldName) => {
+      const field = fieldValues.find(fv => 
+        fv.field?.name?.toLowerCase() === fieldName.toLowerCase()
+      );
+      
+      if (field?.title) {
+        return {
+          title: field.title,
+          startDate: field.startDate,
+          duration: field.duration
+        };
+      }
+      
+      return null;
     };
 
     // Helper function to safely parse integer values
@@ -122,6 +147,9 @@ class SyncService {
     const startDateValue = getFieldValue('Start Date') || getFieldValue('Started');
     const endDateValue = getFieldValue('End Date') || getFieldValue('Due Date') || getFieldValue('Target Date');
     
+    // Get iteration/sprint information
+    const iterationInfo = getIterationField('Iteration') || getIterationField('Sprint');
+    
     const workItemData = {
       github_item_id: item.id,
       github_issue_number: content.number || null,
@@ -134,6 +162,9 @@ class SyncService {
       start_date: parseDateField(startDateValue),
       end_date: parseDateField(endDateValue),
       milestone: content.milestone?.title || null,
+      iteration_title: iterationInfo?.title || null,
+      iteration_start_date: parseDateField(iterationInfo?.startDate) || null,
+      iteration_duration: parseIntegerField(iterationInfo?.duration) || null,
       github_data: JSON.stringify(item)
     };
 
@@ -142,8 +173,9 @@ class SyncService {
       `INSERT INTO work_items (
         project_id, github_item_id, github_issue_number, title, status, 
         assignee_id, size_estimate, priority, item_type, start_date, 
-        end_date, milestone, github_data, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+        end_date, milestone, iteration_title, iteration_start_date, 
+        iteration_duration, github_data, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
       ON CONFLICT (project_id, github_item_id) 
       DO UPDATE SET 
         title = EXCLUDED.title,
@@ -155,6 +187,9 @@ class SyncService {
         start_date = EXCLUDED.start_date,
         end_date = EXCLUDED.end_date,
         milestone = EXCLUDED.milestone,
+        iteration_title = EXCLUDED.iteration_title,
+        iteration_start_date = EXCLUDED.iteration_start_date,
+        iteration_duration = EXCLUDED.iteration_duration,
         github_data = EXCLUDED.github_data,
         updated_at = NOW()`,
       [
@@ -170,6 +205,9 @@ class SyncService {
         workItemData.start_date,
         workItemData.end_date,
         workItemData.milestone,
+        workItemData.iteration_title,
+        workItemData.iteration_start_date,
+        workItemData.iteration_duration,
         workItemData.github_data
       ]
     );

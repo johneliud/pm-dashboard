@@ -4,9 +4,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 const BurndownChart = ({ data }) => {
   if (!data || !data.burndown_data || data.burndown_data.length === 0) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Sprint Burndown</h3>
-        <div className="text-center text-gray-500 py-8">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Sprint Burndown</h3>
+        <div className="text-center text-gray-500 dark:text-gray-400 py-8">
           No burndown data available. Sync your project to see progress.
         </div>
       </div>
@@ -14,10 +14,10 @@ const BurndownChart = ({ data }) => {
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border">
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Sprint Burndown</h3>
-        <div className="text-sm text-gray-600">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sprint Burndown</h3>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
           Total: {data.total_points} points
         </div>
       </div>
@@ -56,7 +56,7 @@ const BurndownChart = ({ data }) => {
         </LineChart>
       </ResponsiveContainer>
       
-      <div className="mt-4 text-sm text-gray-600">
+      <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
         Shows ideal burndown vs actual remaining story points over time
       </div>
     </div>

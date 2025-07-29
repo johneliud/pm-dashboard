@@ -1,18 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { usePreferences } from '../../context/PreferencesContext';
 import axios from 'axios';
 import BurndownChart from '../Charts/BurndownChart';
 import VelocityChart from '../Charts/VelocityChart';
 import StatusDistribution from '../Charts/StatusDistribution';
 import ProgressCard from '../Charts/ProgressCard';
+import MilestoneTimeline from '../Charts/MilestoneTimeline';
+import RiskAnalysis from '../Charts/RiskAnalysis';
+import EnhancedWorkload from '../Charts/EnhancedWorkload';
+import AnalyticsFilters from './AnalyticsFilters';
+import LoadingSpinner from '../common/LoadingSpinner';
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  usePreferences(); // Enable theme context
   const [project, setProject] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [phase3Analytics, setPhase3Analytics] = useState({
+    milestones: null,
+    riskAnalysis: null,
+    enhancedWorkload: null
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filters, setFilters] = useState({});
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [milestones, setMilestones] = useState([]);
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -41,6 +56,8 @@ const ProjectDetails = () => {
       setProject(projectData);
       setAnalytics(analyticsResponse.data);
 
+      await fetchPhase3Analytics();
+
     } catch (error) {
       console.error('Error fetching project data:', error);
       setError(error.response?.data?.error || 'Failed to fetch project data');
@@ -48,6 +65,60 @@ const ProjectDetails = () => {
       setLoading(false);
     }
   };
+
+  const fetchPhase3Analytics = async () => {
+    try {
+      const [milestonesResponse, riskResponse, workloadResponse] = await Promise.all([
+        axios.get(`${API_BASE_URL}/analytics/${projectId}/milestones`),
+        axios.get(`${API_BASE_URL}/analytics/${projectId}/risk-analysis`),
+        axios.get(`${API_BASE_URL}/analytics/${projectId}/enhanced-workload`)
+      ]);
+
+      setPhase3Analytics({
+        milestones: milestonesResponse.data,
+        riskAnalysis: riskResponse.data,
+        enhancedWorkload: workloadResponse.data
+      });
+
+      // Extract team members and milestones for filters
+      if (workloadResponse.data && workloadResponse.data.length > 0) {
+        const members = workloadResponse.data.map((member, index) => ({
+          id: index + 1,
+          display_name: member.assignee,
+          github_username: member.assignee
+        }));
+        setTeamMembers(members);
+      }
+
+      if (milestonesResponse.data && milestonesResponse.data.length > 0) {
+        const milestoneNames = milestonesResponse.data.map(m => m.name);
+        setMilestones(milestoneNames);
+      }
+
+    } catch (error) {
+      console.error('Error fetching Phase 3 analytics:', error);
+    }
+  };
+
+  const handleFiltersChange = useCallback(async (newFilters) => {
+    setFilters(newFilters);
+    
+    // Only fetch filtered data if there are active filters
+    const hasActiveFilters = Object.values(newFilters).some(value => value !== '');
+    if (hasActiveFilters) {
+      try {
+        const queryParams = new URLSearchParams();
+        Object.entries(newFilters).forEach(([key, value]) => {
+          if (value) queryParams.append(key, value);
+        });
+
+        const response = await axios.get(`${API_BASE_URL}/analytics/${projectId}/filtered?${queryParams}`);
+        console.log('Filtered analytics:', response.data);
+      } catch (error) {
+        console.error('Error fetching filtered analytics:', error);
+      }
+    }
+  }, [projectId, API_BASE_URL]);
 
   const handleSyncProject = async () => {
     try {
@@ -65,7 +136,7 @@ const ProjectDetails = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg text-gray-600">Loading project analytics...</div>
+        <LoadingSpinner size="lg" text="Loading project analytics..." />
       </div>
     );
   }
@@ -87,29 +158,29 @@ const ProjectDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 gap-4">
+            <div className="flex items-start sm:items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="text-gray-600 hover:text-gray-900"
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 flex-shrink-0 mt-1 sm:mt-0"
               >
                 ← Back
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{project?.name}</h1>
-                <p className="text-sm text-gray-600">
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{project?.name}</h1>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">
                   {project?.github_owner}/{project?.github_repo} (Project #{project?.github_project_number})
                 </p>
               </div>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-2 sm:gap-4 w-full sm:w-auto">
               <button
                 onClick={handleSyncProject}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium flex-1 sm:flex-none"
               >
                 Sync Data
               </button>
@@ -121,60 +192,47 @@ const ProjectDetails = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+          <div className="mb-6 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 px-4 py-3 rounded">
             {error}
           </div>
         )}
 
+        {/* Analytics Filters */}
+        <AnalyticsFilters 
+          onFiltersChange={handleFiltersChange}
+          teamMembers={teamMembers}
+          milestones={milestones}
+        />
+
         {/* Analytics Grid */}
-        <div className="grid gap-6">
-          {/* Progress Overview */}
-          <ProgressCard data={analytics?.progress} />
+        <div className="grid gap-4 sm:gap-6">
+          {/* Progress Overview & Risk Analysis */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <ProgressCard data={analytics?.progress} />
+            <RiskAnalysis data={phase3Analytics.riskAnalysis} />
+          </div>
+
+          {/* Milestone Timeline */}
+          <MilestoneTimeline data={phase3Analytics.milestones} />
 
           {/* Charts Row 1 */}
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             <BurndownChart data={analytics?.burndown} />
             <VelocityChart data={analytics?.velocity} />
           </div>
 
           {/* Charts Row 2 */}
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             <StatusDistribution data={analytics?.status_distribution} />
-            
-            {/* Team Workload */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Team Workload</h3>
-              {analytics?.team_workload && analytics.team_workload.length > 0 ? (
-                <div className="space-y-3">
-                  {analytics.team_workload.map((member, index) => (
-                    <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="font-medium text-gray-900">{member.assignee}</div>
-                        <div className="text-sm text-gray-600">
-                          {member.completed_items}/{member.total_items} completed
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-semibold text-gray-900">{member.total_points}</div>
-                        <div className="text-sm text-gray-600">points</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 py-8">
-                  No team workload data available. Assign work items to team members to see distribution.
-                </div>
-              )}
-            </div>
+            <EnhancedWorkload data={phase3Analytics.enhancedWorkload} />
           </div>
         </div>
 
         {/* No Data Message */}
         {(!analytics?.progress && !analytics?.status_distribution && !analytics?.velocity) && (
           <div className="text-center py-12">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">No Analytics Data</h2>
-            <p className="text-gray-600 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Analytics Data</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Sync your project data to see charts and analytics
             </p>
             <button
