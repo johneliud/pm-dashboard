@@ -55,7 +55,7 @@ const Toast = ({ message, type = 'info', duration = 3000, onClose }) => {
   };
 
   return (
-    <div className={`fixed top-4 right-4 z-50 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`fixed top-24 right-4 z-50 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       <div className={`max-w-sm w-full border rounded-md p-4 shadow-lg ${getTypeStyles()}`}>
         <div className="flex items-start">
           <div className="flex-shrink-0">
