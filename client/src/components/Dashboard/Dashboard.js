@@ -8,6 +8,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import Toast from '../common/Toast';
 import useToast from '../../hooks/useToast';
 import axios from 'axios';
+import config from '../../config';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -20,7 +21,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_BASE_URL = config.API_BASE_URL;
 
   useEffect(() => {
     fetchProjects();

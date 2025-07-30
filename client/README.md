@@ -1,70 +1,260 @@
-# Getting Started with Create React App
+# Project Management Dashboard
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A comprehensive project management dashboard that integrates with GitHub Projects to provide real-time analytics, team performance tracking, and project insights.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **GitHub Integration**: Sync data from GitHub Projects automatically
+- **Real-time Analytics**: Track project progress, velocity, and team performance
+- **Milestone Tracking**: Monitor milestone progress and deadlines
+- **Team Performance**: Analyze workload distribution and productivity
+- **Risk Analysis**: Identify potential project risks and bottlenecks
+- **Sprint Tracking**: Monitor sprint progress and burndown charts
 
-### `npm start`
+## Architecture
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Frontend**: React.js with Tailwind CSS
+- **Backend**: Node.js with Express
+- **Database**: PostgreSQL
+- **Authentication**: JWT-based authentication
+- **GitHub API**: Integration with GitHub GraphQL API
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Prerequisites
 
-### `npm test`
+- Node.js (v16 or higher)
+- PostgreSQL database
+- GitHub Personal Access Token
+- Git
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Installation & Setup
 
-### `npm run build`
+### 1. Clone the Repository
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+git clone <repository-url>
+cd project-management-dashboard
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 2. Backend Setup
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+cd server
+npm install
+```
 
-### `npm run eject`
+Create a `.env` file in the `server` directory:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```env
+# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/pm_dashboard
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# GitHub Integration
+GITHUB_TOKEN=your_github_personal_access_token_here
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+# JWT Configuration
+JWT_SECRET=your_jwt_secret_key_here
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+```
 
-## Learn More
+### 3. Frontend Setup
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+cd client
+npm install
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Create a `.env` file in the `client` directory:
 
-### Code Splitting
+```env
+# API Configuration
+REACT_APP_API_URL=http://localhost:5000/api
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### 4. Database Setup
 
-### Analyzing the Bundle Size
+The database will be automatically initialized when you start the server for the first time. The schema includes:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+- Users and authentication
+- Projects and GitHub integration
+- Work items and team members
+- Analytics and performance data
 
-### Making a Progressive Web App
+## GitHub Token Setup
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Creating a GitHub Personal Access Token
 
-### Advanced Configuration
+1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Click "Generate new token (classic)"
+3. Give it a descriptive name (e.g., "PM Dashboard Token")
+4. Select the following scopes:
+   - `repo` (Full control of private repositories)
+   - `read:project` (Read access to projects)
+   - `read:user` (Read access to user profile)
+   - `read:org` (Read access to organization data)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### Adding GitHub Credentials in the Web App
 
-### Deployment
+1. **Register/Login** to the dashboard
+2. **Create a New Project**:
+   - Project Name: Your project display name
+   - GitHub Owner: Username or organization name
+   - GitHub Repository: Repository name
+   - GitHub Project Number: Found in your GitHub project URL (`/projects/[number]`)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+3. **Project Sync**: The app will automatically test the GitHub connection and sync data
 
-### `npm run build` fails to minify
+### Finding Your GitHub Project Number
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Your GitHub project number is in the URL:
+- `https://github.com/users/username/projects/1` → Project Number: `1`
+- `https://github.com/orgs/orgname/projects/5` → Project Number: `5`
+
+## Running the Application
+
+### Development Mode
+
+1. **Start the backend**:
+```bash
+cd server
+npm run dev
+```
+
+2. **Start the frontend** (in a new terminal):
+```bash
+cd client
+npm start
+```
+
+3. **Access the application**:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:5000/api
+
+### Production Deployment
+
+#### Backend (Render)
+1. Connect your GitHub repository to Render
+2. Set Root Directory: `server`
+3. Build Command: `npm install`
+4. Start Command: `npm start`
+5. Add environment variables in Render dashboard
+
+#### Frontend (Vercel)
+1. Connect your GitHub repository to Vercel
+2. Set Root Directory: `client`
+3. Build Command: `npm run build`
+4. Output Directory: `build`
+5. Install Command: `npm install`
+6. Add environment variable: `REACT_APP_API_URL=https://your-render-app.onrender.com/api`
+
+## Environment Variables
+
+### Backend (.env)
+```env
+DATABASE_URL=postgresql://username:password@host:port/database
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+JWT_SECRET=your-super-secret-jwt-key
+PORT=5000
+NODE_ENV=production
+```
+
+### Frontend (.env)
+```env
+REACT_APP_API_URL=https://your-backend-url.com/api
+```
+
+## Core Features
+
+### 1. Project Overview
+- Progress indicators showing completion status
+- Milestone timeline and progress
+- Recent activity and updates
+
+### 2. Team Performance
+- Individual workload analysis
+- Velocity tracking over time
+- Performance metrics and trends
+
+### 3. Work Item Analytics
+- Status distribution charts
+- Priority and size analysis
+- Completion trends
+
+### 4. Sprint Tracking
+- Sprint burndown charts
+- Velocity measurements
+- Sprint goal tracking
+
+## Security
+
+- JWT-based authentication with secure token storage
+- Environment variables for sensitive configuration
+- CORS protection for API endpoints
+- Input validation and sanitization
+
+## Troubleshooting
+
+### Common Issues
+
+1. **GitHub API Rate Limits**
+   - Ensure your token has proper permissions
+   - Check rate limit status in API responses
+
+2. **Database Connection Issues**
+   - Verify DATABASE_URL format
+   - Ensure PostgreSQL is running
+   - Check firewall settings
+
+3. **CORS Errors**
+   - Update CORS origins in server configuration
+   - Verify frontend URL matches CORS settings
+
+### Debug Mode
+
+Enable debug logging by setting:
+```env
+NODE_ENV=development
+```
+
+## API Documentation
+
+### Authentication Endpoints
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+
+### Project Endpoints
+- `GET /api/projects` - Get user projects
+- `POST /api/projects` - Create new project
+- `POST /api/projects/:id/sync` - Sync project data
+- `GET /api/projects/:id/items` - Get project items
+
+### Analytics Endpoints
+- `GET /api/analytics/:projectId/overview` - Project overview data
+- `GET /api/analytics/:projectId/milestones` - Milestone progress
+- `GET /api/analytics/:projectId/team-workload` - Team performance
+- `GET /api/analytics/:projectId/risk-analysis` - Risk assessment
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For support and questions:
+- Create an issue in the GitHub repository
+- Check the troubleshooting section above
+- Review the API documentation
+
+---
+
+**Note**: Make sure to keep your GitHub token secure and never commit it to version control. Use environment variables for all sensitive configuration.

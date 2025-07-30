@@ -7,7 +7,12 @@ const { initializeDatabase } = require('./db/init');
 const port = process.env.PORT || 5000;
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://your-vercel-app.vercel.app'] 
+    : ['http://localhost:3000'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
@@ -30,29 +35,8 @@ async function startServer() {
     await initializeDatabase();
     console.log('Database initialized successfully');
     
-    app.listen(port, () => {
-      console.log(`Server running on http://localhost:${port}`);
-      console.log('Available endpoints:');
-      console.log('  GET  /api/health');
-      console.log('  POST /api/auth/register');
-      console.log('  POST /api/auth/login');
-      console.log('  GET  /api/projects');
-      console.log('  POST /api/projects');
-      console.log('  POST /api/projects/:id/sync');
-      console.log('  GET  /api/projects/:id/items');
-      console.log('  GET  /api/analytics/:projectId/progress');
-      console.log('  GET  /api/analytics/:projectId/status-distribution');
-      console.log('  GET  /api/analytics/:projectId/velocity');
-      console.log('  GET  /api/analytics/:projectId/burndown');
-      console.log('  GET  /api/analytics/:projectId/workload');
-      console.log('  GET  /api/analytics/:projectId/milestones');
-      console.log('  GET  /api/analytics/:projectId/enhanced-workload');
-      console.log('  GET  /api/analytics/:projectId/risk-analysis');
-      console.log('  GET  /api/analytics/:projectId/filtered');
-      console.log('  GET  /api/analytics/:projectId/sprint-summary');
-      console.log('  GET  /api/analytics/:projectId/sprint-comparison');
-      console.log('  GET  /api/analytics/:projectId/sprint-scope-changes');
-      console.log('  GET  /api/analytics/:projectId/overview');
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`Server running on port ${port}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

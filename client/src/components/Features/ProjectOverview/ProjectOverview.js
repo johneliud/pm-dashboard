@@ -6,6 +6,7 @@ import BurndownChart from './BurndownChart';
 import MilestoneProgress from './MilestoneProgress';
 import RiskSummary from './RiskSummary';
 import axios from 'axios';
+import config from '../../../config';
 
 /**
  * Project Progress Overview Component
@@ -31,7 +32,7 @@ const ProjectOverview = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_BASE_URL = config.API_BASE_URL;
 
   useEffect(() => {
     fetchOverviewData();
