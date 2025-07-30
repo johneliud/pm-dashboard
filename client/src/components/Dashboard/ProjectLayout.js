@@ -22,6 +22,7 @@ const ProjectLayout = () => {
   const [error, setError] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const API_BASE_URL = config.API_BASE_URL;
 
@@ -53,6 +54,7 @@ const ProjectLayout = () => {
 
   const handleSyncProject = async () => {
     try {
+      setIsSyncing(true);
       setError('');
       const response = await axios.post(`${API_BASE_URL}/projects/${projectId}/sync`);
       showSuccess(`Sync completed! ${response.data.itemsSynced} items synced.`);
@@ -60,6 +62,8 @@ const ProjectLayout = () => {
       const errorMessage = error.response?.data?.error || 'Sync failed';
       setError(errorMessage);
       showError(errorMessage);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -125,12 +129,13 @@ const ProjectLayout = () => {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleSyncProject}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium flex items-center gap-2"
+                  disabled={isSyncing}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Sync Data
+                  {isSyncing ? 'Syncing...' : 'Sync Data'}
                 </button>
                 
                 <button
