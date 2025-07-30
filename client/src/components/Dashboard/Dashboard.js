@@ -20,6 +20,7 @@ const Dashboard = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [syncingProjectId, setSyncingProjectId] = useState(null);
 
   const API_BASE_URL = config.API_BASE_URL;
 
@@ -45,6 +46,7 @@ const Dashboard = () => {
 
   const handleSyncProject = useCallback(async (projectId) => {
     try {
+      setSyncingProjectId(projectId);
       setError('');
       const response = await axios.post(`${API_BASE_URL}/projects/${projectId}/sync`);
       showSuccess(`Sync completed! ${response.data.itemsSynced} items synced.`);
@@ -52,6 +54,8 @@ const Dashboard = () => {
       const errorMessage = error.response?.data?.error || 'Sync failed';
       setError(errorMessage);
       showError(errorMessage);
+    } finally {
+      setSyncingProjectId(null);
     }
   }, [API_BASE_URL, showSuccess, showError]);
 
@@ -135,9 +139,10 @@ const Dashboard = () => {
                 <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     onClick={() => handleSyncProject(project.id)}
-                    className="flex-1 px-3 py-2 bg-green-600 text-white text-xs sm:text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium"
+                    disabled={syncingProjectId === project.id}
+                    className="flex-1 px-3 py-2 bg-green-600 text-white text-xs sm:text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Sync Data
+                    {syncingProjectId === project.id ? 'Syncing...' : 'Sync Data'}
                   </button>
                   <button
                     onClick={() => navigate(`/project/${project.id}/overview`)}

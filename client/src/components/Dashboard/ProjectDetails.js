@@ -29,6 +29,7 @@ const ProjectDetails = () => {
   const [filters, setFilters] = useState({});
   const [teamMembers, setTeamMembers] = useState([]);
   const [milestones, setMilestones] = useState([]);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const API_BASE_URL = config.API_BASE_URL;
 
@@ -123,6 +124,7 @@ const ProjectDetails = () => {
 
   const handleSyncProject = async () => {
     try {
+      setIsSyncing(true);
       setError('');
       const response = await axios.post(`${API_BASE_URL}/projects/${projectId}/sync`);
       alert(`Sync completed! ${response.data.itemsSynced} items synced.`);
@@ -131,6 +133,8 @@ const ProjectDetails = () => {
       fetchProjectData();
     } catch (error) {
       setError(error.response?.data?.error || 'Sync failed');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -181,9 +185,10 @@ const ProjectDetails = () => {
             <div className="flex gap-2 sm:gap-4 w-full sm:w-auto">
               <button
                 onClick={handleSyncProject}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium flex-1 sm:flex-none"
+                disabled={isSyncing}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium flex-1 sm:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sync Data
+                {isSyncing ? 'Syncing...' : 'Sync Data'}
               </button>
             </div>
           </div>
@@ -238,9 +243,10 @@ const ProjectDetails = () => {
             </p>
             <button
               onClick={handleSyncProject}
-              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isSyncing}
+              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sync Project Data
+              {isSyncing ? 'Syncing...' : 'Sync Project Data'}
             </button>
           </div>
         )}
