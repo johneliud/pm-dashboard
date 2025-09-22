@@ -256,6 +256,91 @@ router.get('/:projectId/sprint-scope-changes', authenticateToken, verifyProjectO
   }
 });
 
+// Get priority breakdown
+router.get('/:projectId/priority-breakdown', authenticateToken, verifyProjectOwnership, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const analyticsService = new AnalyticsService();
+    
+    const result = await analyticsService.getPriorityBreakdown(projectId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Get priority breakdown error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get size analysis
+router.get('/:projectId/size-analysis', authenticateToken, verifyProjectOwnership, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const analyticsService = new AnalyticsService();
+    
+    const result = await analyticsService.getSizeAnalysis(projectId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Get size analysis error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get blockers dashboard
+router.get('/:projectId/blockers', authenticateToken, verifyProjectOwnership, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const analyticsService = new AnalyticsService();
+    
+    const result = await analyticsService.getBlockersDashboard(projectId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Get blockers dashboard error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get work item analytics overview (combines work item specific metrics)
+router.get('/:projectId/work-item-analytics', authenticateToken, verifyProjectOwnership, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const analyticsService = new AnalyticsService();
+    
+    // Get all work item analytics in parallel
+    const [statusDist, priorityBreakdown, sizeAnalysis, blockers] = await Promise.all([
+      analyticsService.getStatusDistribution(projectId),
+      analyticsService.getPriorityBreakdown(projectId),
+      analyticsService.getSizeAnalysis(projectId),
+      analyticsService.getBlockersDashboard(projectId)
+    ]);
+
+    const workItemAnalytics = {
+      status_distribution: statusDist.success ? statusDist.data : null,
+      priority_breakdown: priorityBreakdown.success ? priorityBreakdown.data : null,
+      size_analysis: sizeAnalysis.success ? sizeAnalysis.data : null,
+      blockers: blockers.success ? blockers.data : null
+    };
+
+    res.json(workItemAnalytics);
+  } catch (error) {
+    console.error('Get work item analytics error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get project overview (combines multiple metrics)
 router.get('/:projectId/overview', authenticateToken, verifyProjectOwnership, async (req, res) => {
   try {

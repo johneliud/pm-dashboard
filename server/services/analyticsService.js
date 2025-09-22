@@ -867,6 +867,130 @@ class AnalyticsService {
       return 'behind_schedule';
     }
   }
+
+  // Get priority breakdown for work items
+  async getPriorityBreakdown(projectId) {
+    try {
+      const result = await pool.query(
+        `
+        SELECT 
+          COALESCE(priority, 'None') as priority,
+          COUNT(*) as count
+        FROM work_items 
+        WHERE project_id = $1 
+        GROUP BY priority
+        ORDER BY 
+          CASE 
+            WHEN priority = 'High' THEN 1
+            WHEN priority = 'Medium' THEN 2
+            WHEN priority = 'Low' THEN 3
+            ELSE 4
+          END
+      `,
+        [projectId]
+      );
+
+      const data = result.rows.map((row) => ({
+        name: row.priority || 'None',
+        value: parseInt(row.count),
+      }));
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get size analysis distribution
+  async getSizeAnalysis(projectId) {
+    try {
+      const result = await pool.query(
+        `
+        SELECT 
+          COALESCE(size_estimate::text, 'None') as size,
+          COUNT(*) as count
+        FROM work_items 
+        WHERE project_id = $1 
+        GROUP BY size_estimate
+        ORDER BY 
+          CASE 
+            WHEN size_estimate IS NULL THEN 999
+            ELSE size_estimate 
+          END
+      `,
+        [projectId]
+      );
+
+      const data = result.rows.map((row) => ({
+        name: row.size,
+        value: parseInt(row.count),
+      }));
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get blockers dashboard - items stuck in status for too long
+  async getBlockersDashboard(projectId) {
+    try {
+      // Calculate average cycle time for completed items as baseline
+      const avgCycleTimeResult = await pool.query(
+        `
+        SELECT AVG(
+          EXTRACT(EPOCH FROM (updated_at::timestamp - start_date::timestamp))/86400
+        ) as avg_cycle_time
+        FROM work_items 
+        WHERE project_id = $1 
+          AND status IN ('Done', 'Completed', 'Closed')
+          AND start_date IS NOT NULL
+          AND updated_at IS NOT NULL
+      `,
+        [projectId]
+      );
+
+      const avgCycleTime = avgCycleTimeResult.rows[0].avg_cycle_time || 7; // Default to 7 days
+      const blockerThreshold = Math.max(3, avgCycleTime * 1.5); // At least 3 days, or 1.5x average
+
+      const result = await pool.query(
+        `
+        SELECT 
+          wi.title,
+          wi.status,
+          wi.priority,
+          wi.size_estimate,
+          wi.milestone,
+          wi.updated_at,
+          COALESCE(tm.display_name, tm.github_username, 'Unassigned') as assignee,
+          EXTRACT(EPOCH FROM (NOW()::timestamp - wi.updated_at::timestamp))/86400 as days_stuck
+        FROM work_items wi
+        LEFT JOIN team_members tm ON wi.assignee_id = tm.id
+        WHERE wi.project_id = $1 
+          AND wi.status NOT IN ('Done', 'Completed', 'Closed')
+          AND wi.updated_at < NOW() - ($2 || ' days')::INTERVAL
+        ORDER BY days_stuck DESC
+        LIMIT 20
+      `,
+        [projectId, blockerThreshold]
+      );
+
+      const data = result.rows.map((row) => ({
+        title: row.title,
+        status: row.status,
+        priority: row.priority,
+        size: row.size_estimate,
+        milestone: row.milestone,
+        assignee: row.assignee,
+        daysStuck: Math.round(parseFloat(row.days_stuck)),
+        updatedAt: row.updated_at,
+      }));
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 module.exports = AnalyticsService;
